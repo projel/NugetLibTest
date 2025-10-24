@@ -1,0 +1,59 @@
+﻿name: Publish NuGet package
+
+on:
+  push:
+    tags:
+      - 'v*'  # dispara somente em tags do tipo v1.0.0, v2.3.4, etc.
+    branches:
+      - main  # garante que apenas a branch main dispare o workflow
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write  # necessário para publicar no GitHub Packages
+
+    steps:
+      # 1️⃣ Checkout do código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2️⃣ Verifica se a tag pertence à main
+      - name: Ensure tag belongs to main
+        run: |
+          TAG_COMMIT=$(git rev-list -n 1 $GITHUB_REF)
+          MAIN_COMMIT=$(git rev-list -n 1 origin/main)
+          if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
+            echo "❌ A tag não está na branch main. Publicação abortada."
+            exit 1
+          fi
+
+      # 3️⃣ Instalar .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x' # ajuste conforme sua versão
+
+      # 4️⃣ Restaurar dependências
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # 5️⃣ Compilar
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # 6️⃣ Criar pacote NuGet
+      - name: Pack
+        run: dotnet pack --configuration Release --no-build -o ./artifacts
+
+      # 7️⃣ Publicar no GitHub Packages
+      - name: Publish to GitHub Packages
+        run: dotnet nuget push "./artifacts/*.nupkg" --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}"
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # (Opcional) Publicar também no NuGet.org
+      # - name: Publish to nuget.org
+      #   run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
