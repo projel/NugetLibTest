@@ -16,39 +16,42 @@ jobs:
       packages: write  # necessário para publicar no GitHub Packages
 
     steps:
-      # 1️⃣ Checkout do código
+      # 1️ Checkout do código
       - name: Checkout
         uses: actions/checkout@v4
+        with: 
+            fetch-depth: 0  # necessário para obter todo o histórico de commits
 
-      # 2️⃣ Verifica se a tag pertence à main
+      # 2️ Verifica se a tag pertence à main
       - name: Ensure tag belongs to main
         run: |
+          git fetch origin main --depth=1
           TAG_COMMIT=$(git rev-list -n 1 $GITHUB_REF)
-          MAIN_COMMIT=$(git rev-list -n 1 origin/main)
+          MAIN_COMMIT=$(git rev-parse origin/main)
           if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
-            echo "❌ A tag não está na branch main. Publicação abortada."
+            echo "A tag não está na branch main. Publicação abortada."
             exit 1
           fi
 
-      # 3️⃣ Instalar .NET
+      # 3️ Instalar .NET
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x' # ajuste conforme sua versão
 
-      # 4️⃣ Restaurar dependências
+      # 4️ Restaurar dependências
       - name: Restore dependencies
         run: dotnet restore
 
-      # 5️⃣ Compilar
+      # 5️ Compilar
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      # 6️⃣ Criar pacote NuGet
+      # 6️ Criar pacote NuGet
       - name: Pack
         run: dotnet pack --configuration Release --no-build -o ./artifacts
 
-      # 7️⃣ Publicar no GitHub Packages
+      # 7️ Publicar no GitHub Packages
       - name: Publish to GitHub Packages
         run: dotnet nuget push "./artifacts/*.nupkg" --source "github" --api-key "${{ secrets.GITHUB_TOKEN }}"
         env:
