@@ -1,14 +1,15 @@
 name: Main Branch Protection
 
 on:
-    pull_request:
-        types: [opened, synchronize, reopened]    
+  pull_request:
+    types: [opened, synchronize, reopened]
+
 jobs:
-    check_branch:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Check branch
-              if: github.base_ref == 'main' && github.head_ref != 'develop'
-              run: |
-                echo "ERROR: You can only merge to main from dev."
-                exit 1
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if PR not from develop to main
+        if: ${{ github.base_ref == 'main' && github.head_ref != 'develop' }}
+        run: |
+          echo "ERROR: You can only merge to main from develop."
+          exit 1
